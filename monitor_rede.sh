@@ -12,9 +12,30 @@ fi
 DATA=$(date +%Y-%m-%d)
 HORA=$(date +%H:%M:%S)
 
-# Roda o speedtest e extrai apenas as colunas necessárias (Ping, Download, Upload)
-# O speedtest-cli --csv retorna: ID,Sponsor,ServerName,Timestamp,Distance,Ping,Download,Upload...
-RESULTADO_RAW=$(speedtest-cli --csv --bytes --secure)
+# Inicializa a variável como vazia
+RESULTADO_RAW=""
+
+# Loop para tentar até 3 vezes
+for tentativa in 1 2 3; do
+    # Tenta rodar o speedtest
+    RESULTADO_RAW=$(speedtest-cli --csv --secure 2>/dev/null)
+    
+    # Se o resultado NÃO estiver vazio, o comando teve sucesso!
+    if [ -n "$RESULTADO_RAW" ]; then
+        break
+    fi
+    
+    # Se falhar, espera 5 segundos antes de tentar a próxima vez
+    if [ $tentativa -lt 3 ]; then
+        sleep 5
+    fi
+done
+
+# VERIFICAÇÃO: Se o resultado estiver vazio, registra o erro e sai
+if [ -z "$RESULTADO_RAW" ]; then
+    echo "$DATA,$HORA,ERRO_CONEXAO,0,0" >> "$LOG_FILE"
+    exit 1
+fi
 
 # Extrair valores usando o 'cut' (Colunas 6, 7 e 8)
 PING_RAW=$(echo $RESULTADO_RAW | cut -d',' -f6)
